@@ -1,0 +1,184 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ include "drupal.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "drupal.name" . }}
+    helm.sh/chart: {{ include "drupal.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "drupal.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      tier: drupal
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "drupal.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        tier: drupal
+    spec:
+{{- if .Values.drupal.initContainers }}
+      initContainers:
+{{ toYaml .Values.drupal.initContainers | indent 8 }}
+{{- end }}
+      containers:
+      - image: "{{ .Values.drupal.image }}:{{ default .Chart.AppVersion .Values.drupal.tag }}"
+        imagePullPolicy: {{ default "" .Values.drupal.imagePullPolicy | quote }}
+        name: drupal
+        securityContext:
+          capabilities:
+            drop:
+              - NET_RAW
+{{- if .Values.drupal.healthcheck.enabled }}
+        livenessProbe:
+          exec:
+            command:
+              - php-fpm-healthcheck
+          initialDelaySeconds: 0
+          periodSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+              - php-fpm-healthcheck
+          initialDelaySeconds: 1
+          periodSeconds: 5
+{{- end  }}
+        env:
+{{- if .Values.external.enabled }}
+        - name: EXTERNAL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "drupal.fullname" . }}
+              key: databasePassword
+{{- end }}
+{{- if .Values.osb.enabled }}
+        - name: OSB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include "drupal.fullname" . }}-osb"
+              key: host
+        - name: OSB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include "drupal.fullname" . }}-osb"
+              key: port
+        - name: OSB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include "drupal.fullname" . }}-osb"
+              key: database
+        - name: OSB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include "drupal.fullname" . }}-osb"
+              key: username
+        - name: OSB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include "drupal.fullname" . }}-osb"
+              key: password
+{{- else if .Values.mysql.enabled }}
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # This is not ideal, but calling {{ include "mysql.secretName" . }}
+              # was returning the wrong result.
+              name: "{{ .Release.Name }}-mysql"
+              key: mysql-password
+{{- end }}
+{{- if eq .Values.files.provider "minio" }}
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Release.Name }}-minio"
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Release.Name }}-minio"
+              key: secretkey
+{{- else if eq .Values.files.provider "s3" }}
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Release.Name }}-s3"
+              key: accesskey
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Release.Name }}-s3"
+              key: secretkey
+{{- end }}
+{{- if .Values.extraVars }}
+{{ toYaml .Values.extraVars | indent 8 }}
+{{- end }}
+        ports:
+        - containerPort: 9000
+          name: tcp-php-fpm
+          protocol: TCP
+        volumeMounts:
+        - name: cm-drupal
+          mountPath: /var/www/html/sites/default/settings.php
+          subPath: settings.php
+          readOnly: true
+        - name: cm-drupal
+          mountPath: /var/www/html/sites/default/extra.settings.php
+          subPath: extra.settings.php
+          readOnly: true
+        - name: ssmtp
+          mountPath: /etc/ssmtp/ssmtp.conf
+          subPath: ssmtp.conf
+          readOnly: true
+        - name: twig-cache
+          mountPath: /cache/twig
+        - name: config-sync
+          mountPath: /config/sync
+{{- if not .Values.drupal.disableDefaultFilesMount }}
+        - name: files
+          mountPath: /var/www/html/sites/default/files
+          subPath: public
+        - name: files
+          mountPath: /var/www/private
+          subPath: private
+{{- end }}
+{{- if .Values.drupal.volumeMounts }}
+{{ toYaml .Values.drupal.volumeMounts | indent 8 }}
+{{- end }}
+      {{- if .Values.drupal.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.drupal.imagePullSecrets | indent 8 }}
+      {{- end }}
+      # Allow non-root user to access PersistentVolume
+      securityContext:
+        
+{{ toYaml .Values.drupal.securityContext | indent 8 }}
+      volumes:
+      - name: cm-drupal
+        configMap:
+          name: {{ include "drupal.fullname" . }}
+      - name: ssmtp
+        secret:
+          secretName: {{ include "drupal.fullname" . }}-ssmtp
+          items:
+            - key: ssmtp.conf
+              path: ssmtp.conf
+      - name: twig-cache
+        emptyDir: {}
+      - name: config-sync
+        emptyDir: {}
+{{- if .Values.drupal.persistence.enabled }}
+      - name: files
+        persistentVolumeClaim:
+          claimName: {{ template "drupal.fullname" . }}-drupal
+{{- else if not .Values.drupal.disableDefaultFilesMount }}
+      - name: files
+        emptyDir: {}
+{{- end }}
+{{- if .Values.drupal.volumes }}
+{{ toYaml .Values.drupal.volumes | indent 6 }}
+{{- end }}

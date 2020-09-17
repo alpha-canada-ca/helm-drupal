@@ -1,0 +1,353 @@
+## Configure Ingress resource that allow you to access the Drupal installation
+## Set up the URL
+## ref: http://kubernetes.io/docs/user-guide/ingress/
+##
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  path: /
+  hosts:
+    - chart-example.local
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+drupal:
+  ## Drupal image version
+  ## ref: https://hub.docker.com/drupalwxt/site-wxt/tags/
+  ##
+  image: drupalwxt/site-wxt
+
+  ## Note that by default we use appVersion to get image tag
+  #tag: 3.0.6
+
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+  ##
+  # imagePullSecrets:
+  #   - name: myRegistryKeySecretName
+
+  ## Specify a imagePullPolicy
+  ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  imagePullPolicy: IfNotPresent
+
+  replicas: 1
+
+  ## User of the application
+  ##
+  username: admin
+
+  ## Application password
+  ##
+  password: WxT2019
+
+  ## Site configuration
+  ##
+  profile: wxt
+  siteEmail: admin@example.com
+  siteName: Drupal Install Profile (WxT)
+
+  # Default WxT Library theme (only used if install and/or reconfigure are enabled)
+  # Common options include: theme-wet-boew, theme-gcweb-legacy, theme-gcweb, ...
+  # wxtTheme: theme-wet-boew
+
+  ## Version of the application
+  ##
+  ## Supported versions: d8
+  ##
+  version: d8
+
+  ## Extra settings.php settings
+  ##
+  extraSettings: ''
+  #  |-
+  #  $settings['trusted_host_patterns'] = ['^example\.com$'];
+
+  # Install Drupal automatically
+  install: true
+
+  # Run migrations for default content
+  migrate: false
+
+  # Reconfigure on upgrade
+  reconfigure: true
+
+  # Configure the Drupal cron
+  cron:
+    # When enabled, a CronJob will run the job based on the schedule
+    enabled: true
+
+    # CronJob schedule (standard cron syntax)
+    # Defaults to once an hour
+    schedule: '0 * * * *'
+
+  # php-fpm healthcheck
+  # Requires https://github.com/renatomefi/php-fpm-healthcheck in the container.
+  healthcheck:
+    enabled: true
+
+  serviceType: ClusterIP
+
+  persistence:
+    enabled: false
+    ## A manually managed Persistent Volume and Claim
+    ## Requires persistence.enabled: true
+    ## If defined, PVC must be created manually before volume will be bound
+    # existingClaim:
+
+    ## Drupal data Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    annotations: {}
+    accessMode: ReadWriteOnce
+    size: 8Gi
+
+  # Allows custom /var/www/html/sites/default/files and /var/www/private mounts
+  disableDefaultFilesMount: false
+  volumes:
+  #  - name: nothing
+  #    emptyDir: {}
+  volumeMounts:
+  #  - mountPath: /var/nothing
+  #    name: nothing
+  #    readOnly: true
+
+  securityContext:
+    fsGroup: 82
+    runAsUser: 82
+    runAsGroup: 82
+
+  smtp:
+    host: mail
+    tls: true
+    starttls: true
+    auth:
+      enabled: false
+      user: ''
+      password: ''
+      # Note: sSMTP only supports LOGIN and CRAM-MD5
+      method: LOGIN
+
+nginx:
+  ## Nginx image version
+  ## ref: https://hub.docker.com/drupalwxt/site-wxt/tags/
+  image: drupalwxt/site-wxt
+  ## Note that by default we use appVersion to get image tag
+  #tag: 3.0.6-nginx
+
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+  ##
+  # imagePullSecrets:
+  #   - name: myRegistryKeySecretName
+
+  ## Specify a imagePullPolicy
+  ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  imagePullPolicy: IfNotPresent
+
+  replicas: 1
+
+  # Set your cluster's DNS resolution service here
+  resolver: 10.0.0.10
+
+  serviceType: ClusterIP
+
+  persistence:
+    enabled: false
+    ## A manually managed Persistent Volume and Claim
+    ## Requires persistence.enabled: true
+    ## If defined, PVC must be created manually before volume will be bound
+    # existingClaim:
+
+    ## Nginx data Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    annotations: {}
+    accessMode: ReadWriteOnce
+    size: 8Gi
+
+  volumes:
+  #  - name: nothing
+  #    emptyDir: {}
+  volumeMounts:
+  #  - mountPath: /var/nothing
+  #    name: nothing
+  #    readOnly: true
+
+  securityContext:
+    enabled: true
+    fsGroup: 33
+
+# Specify an external database
+# Useful for managed offerings from your Cloud Provider
+external:
+  enabled: false
+  # Drupal DB driver
+  driver: mysql
+  port: 3306
+  host: mysql.example.org
+  # Credentials
+  database: wxt
+  user: wxt
+  password: password
+
+# Use a managed instance from the Open Service Broker
+# Due to limitations with provider we don't recommend this
+# (example here is for Azure)
+osb:
+  enabled: false
+  # Drupal DB driver
+  driver: mysql
+
+  serviceClass: azure-mysql-5-7
+  servicePlan: general-purpose
+  parameters:
+    location: canadacentral
+    resourceGroup: rg-name
+    firewallRules:
+    - startIPAddress: "0.0.0.0"
+      endIPAddress: "255.255.255.255"
+      name: "AllowAll"
+
+## Configuration values for the MySQL dependency sub-chart
+## ref: https://github.com/kubernetes/charts/blob/master/stable/mysql/README.md
+mysql:
+  enabled: true
+  imageTag: 5.7.28
+
+  ## Specify password for root user
+  ##
+  ## Default: random 10 character string
+  # mysqlRootPassword: testing
+
+  ## Create a database user
+  ##
+  mysqlUser: wxt
+  ## Default: random 10 character string
+  # mysqlPassword:
+
+  ## Create a database
+  ##
+  mysqlDatabase: wxt
+
+  ## Persist data to a persistent volume
+  persistence:
+    enabled: true
+    storageClass: managed-premium
+    size: 128Gi
+
+  # Custom mysql configuration files used to override default mysql settings
+  configurationFiles:
+   mysql.cnf: |-
+     [mysqld]
+     max_allowed_packet = 256M
+     innodb_buffer_pool_size = 4096M
+     innodb_buffer_pool_instances = 4
+     table_definition_cache = 4096
+     table_open_cache = 8192
+     innodb_flush_log_at_trx_commit=2
+
+## Configuration values for the PostgreSQL dependency sub-chart
+## ref: https://github.com/kubernetes/charts/blob/master/stable/postgresql/README.md
+postgresql:
+  enabled: false
+  image:
+    tag: 11.6.0-debian-9-r0
+  postgresqlUsername: wxt
+  postgresqlPassword: ""
+  postgresqlDatabase: wxt
+  postgresqlConfiguration:
+    listenAddresses: "'*'"
+    maxConnections: "1500"
+  persistence:
+    enabled: true
+    size: 50Gi
+  service:
+    port: 5432
+  resources: {}
+  #  requests:
+  #    memory: "512Mi"
+  #    cpu: "100m"
+  #  limits:
+  #    memory: "1Gi"
+  #    cpu: "500m"
+  nodeSelector: {}
+
+# Files: object storage
+#
+# Use Minio for object storage by default.
+# You can use any S3 compatible object storage.
+# Also:
+#   - minio
+#   - s3
+#   - none
+files:
+  provider: minio
+  cname:
+    enabled: false
+    hostname: object.example.com
+  folders:
+    public: files-public
+    private: files-private
+
+s3:
+  accessKey: abc
+  secretKey: abc
+  bucket: mybucketname
+  region: us-east-1
+
+  customHost:
+    enabled: false
+    hostname: host.example.com
+    pathBased: true
+
+# Note: Even if you set the defaultBucket.enabled to false,
+# you still need to set the defaultBucket.name to the desired bucket.
+minio:
+  enabled: true
+
+  ## set kubernetes cluster domain where minio is running
+  ##
+  clusterDomain: cluster.local
+
+  ## minio server mode, i.e. standalone or distributed.
+  ## Distributed Minio ref: https://docs.minio.io/docs/distributed-minio-quickstart-guide
+  ##
+  mode: standalone
+
+  ## Set default accesskey, secretkey, Minio config file path, volume mount path and
+  ## number of nodes (only used for Minio distributed mode)
+  ## Distributed Minio ref: https://docs.minio.io/docs/distributed-minio-quickstart-guide
+  ##
+  existingSecret: ""
+  accessKey: "AKIAIOSFODNN7EXAMPLE"
+  secretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  replicas: 1
+
+  ## Enable persistence using Persistent Volume Claims
+  ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  ##
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  defaultBucket:
+    enabled: true
+    name: wxt

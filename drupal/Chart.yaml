@@ -1,0 +1,23 @@
+name: drupal
+apiVersion: v1
+version: 0.2.0
+appVersion: 3.0.6
+description: Drupal 8 variant of the Web Experience Toolkit (WxT).
+keywords:
+- drupal
+- cms
+- wxt
+- http
+- web
+- application
+- php
+home: http://www.drupal.org/project/wxt
+icon: https://bitnami.com/assets/stacks/drupal/img/drupal-stack-220x234.png
+sources:
+- https://github.com/drupalwxt/wxt
+maintainers:
+- name: sylus
+  email: william.hearn@canada.ca
+- name: zachomedia
+  email: zachary.seguin@canada.ca
+engine: gotpl

@@ -1,0 +1,164 @@
+ingress:
+  enabled: false
+  annotations: 
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  path: /
+  hosts:
+    - hc-sc.tbs.alpha.canada.ca
+  tls: 
+    - secretName: ##hostSecret##
+      hosts:
+        - hc-sc.tbs.alpha.canada.ca
+
+drupal:
+  image: ryanhyma/pilot-web
+
+  ## Note that by default we use appVersion to get image tag
+  tag: 1.0.0
+
+  imagePullPolicy: Always
+  
+  ## Site configuration
+  ##
+  profile: wxt
+  siteEmail: admin@example.com
+  siteName: Drupal Install Profile (WxT)
+
+  
+
+  ## User of the application
+  ##
+  username: admin
+
+  ## Application password
+  ##
+  password: hc2020
+
+  # php-fpm healthcheck
+  # Requires https://github.com/renatomefi/php-fpm-healthcheck in the container.
+  # (note: official images do not contain this feature yet)
+  healthcheck:
+    enabled: true
+
+  # Switch to canada.ca theme (only used if install and/or reconfigure are enabled)
+  # Common options include: theme-wet-boew, theme-gcweb-legacy
+  wxtTheme: theme-gcweb
+
+  ## Extra settings.php settings
+  ##
+  extraSettings: ''
+  #  |-
+  #  $settings['trusted_host_patterns'] = ['^example\.com$'];
+
+  # Install Drupal automatically
+  install: true
+
+  # Run migrations for default content
+  migrate: true
+
+  # Reconfigure on upgrade
+  reconfigure: true
+
+  # php-fpm healthcheck
+  # Requires https://github.com/renatomefi/php-fpm-healthcheck in the container.
+  # (note: official images do not contain this feature yet)
+  healthcheck:
+    enabled: true
+
+  # Allows custom /var/www/html/sites/default/files and /var/www/private mounts
+  disableDefaultFilesMount: true
+
+  # kubectl create secret generic drupal-storage --from-literal=azurestorageaccountname=$STORAGE_ACCOUNT_NAME --from-literal=azurestorageaccountkey=$STORAGE_KEY -n drupal
+  volumes:
+    - name: files-public
+      azureFile:
+        secretName: drupal-storage
+        shareName: hc-drupal-public
+    - name: files-private
+      azureFile:
+        secretName: drupal-storage
+        shareName: hc-drupal-private
+  volumeMounts:
+    - name: files-public
+      mountPath: /var/www/html/sites/default/files
+    - name: files-private
+      mountPath: /var/www/private
+
+  initContainers:
+    # Pre-create the media-icons folder
+    - name: init-media-icons-folder
+      image: alpine:3.10
+      command:
+        - mkdir
+        - -p
+        - /files/media-icons/generic
+      volumeMounts:
+        - name: files-public
+          mountPath: /files
+        
+
+nginx:
+  image: ryanhyma/pilot-nginx
+  ## Note that by default we use appVersion to get image tag
+  tag: 1.0.0
+  imagePullPolicy: Always
+
+  # Set your cluster's DNS resolution service here
+  resolver: 10.0.0.10
+
+  # kubectl create secret generic drupal-storage --from-literal=azurestorageaccountname=$STORAGE_ACCOUNT_NAME --from-literal=azurestorageaccountkey=$STORAGE_KEY -n drupal
+  volumes:
+    - name: files-public
+      azureFile:
+        secretName: drupal-storage
+        shareName: hc-drupal-public
+  volumeMounts:
+    - name: files-public
+      mountPath: /var/www/html/sites/default/files
+mysql:
+  imageTag: 5.7.28
+
+  mysqlPassword: SUPERsecureMYSQLpassword
+  mysqlRootPassword: SUPERsecureMYSQLrootPASSWORD
+
+  persistence:
+    enabled: true
+    storageClass: default
+    size: 10Gi
+  
+  # Custom mysql configuration files used to override default mysql settings
+  configurationFiles:
+   mysql.cnf: |-
+     [mysqld]
+     key_buffer_size         = 16M  
+     read_buffer_size        = 60K  
+     sort_buffer_size        = 1M  
+     innodb_buffer_pool_size = 64M  
+     tmp_table_size          = 8M  
+     max_allowed_packet      = 16M  
+     thread_stack            = 192K  
+     thread_cache_size       = 8  
+     # This replaces the startup script and checks MyISAM tables if needed
+     # the first time they are touched
+     max_connections        = 25
+
+# Files: object storage
+#
+# Use Minio for object storage by default.
+# You can use any S3 compatible object storage.
+# Also:
+#   - minio
+#   - s3
+#   - none
+files:
+  provider: none
+
+##
+## MINIO
+##
+minio:
+  enabled: false
+
+osb:
+  enabled: false
