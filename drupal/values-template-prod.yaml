@@ -12,7 +12,7 @@ ingress:
         - ##host##
 
 drupal:
-  image: ryanhyma/sitewxt_web
+  image: drupalwxt/site-wxt
 
   ## Note that by default we use appVersion to get image tag
   tag: latest

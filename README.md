@@ -1,32 +1,35 @@
-Helm Chart: Drupal
+Helm Chart: Drupal (Based on work by Will and Zach from StatCan)
 ==================
 
-A [Helm chart](https://helm.sh/) for [Drupal WxT](http://drupalwxt.org/) using [Minio](https://minio.io/) for stateful data. These are the instructions for a Kubernetes package manager to set up Drupal and its environment. You can use this to build a local development environment or a cloud native implementation.
+## Prerequisites
+1. Azure CLI (https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
+2. kubectl (RUN: az aks install-cli)
+3. helm (https://helm.sh/docs/intro/install/)
 
-## Installation
+## Create Site/Instance on alpha
 
-1. Ensure you have a running Kubernetes cluster. You can also test locally with docker for Mac.
+1. az login (one time)
+2. az aks get-credentials (one time)
+3. Git clone the helm chart. (git clone  alpha-canada-ca/helm-drupal )
+4. cd helm-drupal
+5. Create a copy of values-template-prod.yaml
+6. Open Azure port and create a DNS entry for the new site. (https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/Microsoft.Network%2FdnsZones)
+7. kubectl create namespace <namespacename> for example tbs-drupal
+8.  run ./scripts/createNFSSecret.sh <namespacename> using the same namespace as above
+9.  run ./scripts/createNFSShare.sh <publicshare> ex. tbs-public
+10. run ./scripts/createNFSShare.sh <privateshare> ex. tbs-private
+11. run ./scripts/createNFSShare.sh <themeshare> ex. tbs-themes
+12. Update the following values within the copied values-template-prod.yaml file:
+    - ##host## - With the URL of the drupal site for example drupal.tbs.alpha.canada.ca
+    - ##hostsecret## - use the host but replace . with - ex. drupal-tbs-alpha-canada-ca
+    - ##password## - set this to anything, it will be the "admin" password of the site
+    - ##publicShare## - replace with name used for step 9
+    - ##privateShare## - replace with name used for step 10
+    - ##themesShare## - replace with name used for step 11
+13. In the drupal folder run
+    - helm install --name <prefix for workflows> --namespace <namespacename from step 7> -f <name of new values file> --timeout 2400 --wait .
+    - Ex: helm install --name tbs --namespace tbs-drupal -f values-template-prod-tbs-drupal.yaml --timeout 2400 --wait .
+14. Wait, the new site should install, and issues a valid cert. Login with "admin" and the password provided in the ##admin## location of the values template.
 
-2. Git clone the helm chart.
 
-```sh
-git clone https://github.com/drupalwxt/helm-drupal
-cd helm-drupal/drupal
-cp values-nfs-azurefile.yaml values-override.yaml
-```
 
-> **Note**: Currently the default install using the `values.yaml` file alone results in a Drupal installation that leverages Minio for the stateful assets. It is recommended if you are installing in Azure that you instead use the `values-nfs-azurefile.yaml` as your override file.
-
-3. Run the following command:
-
-```sh
-helm install --name drupal -f values-override.yaml --timeout 2400 --wait .
-```
-
-> **Note**: If you have `drupal.install` set to `true`, then a site install will take place before the `helm install` command finishes. The default timeout is `300` seconds (or 5 minutes), but the Drupal install can take much longer.
-
-4. Follow the steps presented to you once the helm install is completed.
-
-## Documentation
-
-Please consult the [documentation](https://github.com/drupalwxt/helm-drupal/tree/master/docs) which is provided in this repository in the `docs` folder should you wish to have more information about a recommended architecture.
