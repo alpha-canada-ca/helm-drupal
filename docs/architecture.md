@@ -1,6 +1,7 @@
 # Architecture
 
 By: William Hearn and Zachary Seguin (Statistics Canada)
+Updated by: Ryan Hyma (Alpha platform specific edits)
 
 ## Introduction
 
@@ -18,14 +19,6 @@ A key mandate is to follow the Open Source Directive as given by the Treasury Bo
 - Facilitate a managed service model whereby a new department can be easily onboard
 
 Provided below is the Terraform (infrastructure as code) necessarily to install the Azure Kubernetes Service Infrastructure as well as configure with optional platform components (RBAC, Service Mesh, Policies, etc).
-
-* Terraform for Kubernetes Infrastructure: [https://github.com/canada-ca-terraform-modules/terraform-kubernetes-aks](https://github.com/canada-ca-terraform-modules/terraform-kubernetes-aks)
-* Terraform for Kubernetes Platform: [https://github.com/canada-ca-terraform-modules/terraform-kubernetes-aks-platform](https://github.com/canada-ca-terraform-modules/terraform-kubernetes-aks-platform)
-
-To highlight that this solution can run on any cloud service provider we are currently working on support for the IBM Kubernetes Services.
-
-* Terraform for Kubernetes Infrastructure: [https://github.com/canada-ca-terraform-modules/terraform-kubernetes-iks](https://github.com/canada-ca-terraform-modules/terraform-kubernetes-iks)
-* Terraform for Kubernetes Platform: [https://github.com/canada-ca-terraform-modules/terraform-kubernetes-iks-platform](https://github.com/canada-ca-terraform-modules/terraform-kubernetes-iks-platform)
 
 ## **Components**
 
